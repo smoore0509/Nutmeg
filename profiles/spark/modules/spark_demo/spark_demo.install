@@ -1,0 +1,77 @@
+<?php
+
+/**
+ * @file
+ * Install file for Spark demo module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function spark_demo_install() {
+  $t = get_t();
+
+  // Create a new 'every_field' node.
+  $node = new stdClass();
+  $node->uid = 1;
+  $node->type = 'every_field';
+  $node->status = 1;
+  $node->promote = 1;
+
+  // Title and body.
+  $node->title = $t('Welcome to Spark!');
+  // @todo: Figure out why it can't deal with links. :\
+  $node->body['und'][0]['value'] = $t('This is a pre-release version of the Spark distribution. In this version, we give to you... the Edit module! This module provides in-line editing capability for a variety of fields: title/body, author submit date, boolean, text, number, and more! Toggle into "Edit" mode up in the toolbar, and try it out on this handy piece of demo content, or create your own!', array('@spark-url' => 'http://drupal.org/project/spark', '@edit-url' => 'http://drupal.org/project/edit'));
+
+  // Boolean.
+  $node->every_field_list_boolean['und'][0]['value'] = 1;
+
+  // List.
+  $node->every_field_list_text['und'][0]['value'] = 'L';
+
+  // Number.
+  $node->every_field_integer['und'][0]['value'] = 7;
+
+  // Short and long text.
+  $node->every_field_text['und'][0]['value'] = $t('A text field.');
+  $node->every_field_text_long['und'][0]['value'] = $t('Collaboratively administrate empowered markets via plug-and-play networks. Dynamically procrastinate B2C users after installed base benefits. Dramatically visualize customer directed convergence without revolutionary ROI.
+
+Efficiently unleash cross-media information without cross-media value. Quickly maximize timely deliverables for real-time schemas. Dramatically maintain clicks-and-mortar solutions without functional solutions.
+
+Completely synergize resource sucking relationships via premier niche markets. Professionally cultivate one-to-one customer service with robust ideas. Dynamically innovate resource-leveling customer service for state of the art customer service.');
+
+  // Taxonomy.
+  $node->every_field_term_reference['und'] = array(
+    array(
+      'tid' => 'autocreate',
+      'vid' => 1,
+      'name' => 'tag 1',
+      'vocabulary_machine_name' => 'tags',
+    ),
+    array(
+      'tid' => 'autocreate',
+      'vid' => 1,
+      'name' => 'another tag',
+      'vocabulary_machine_name' => 'tags',
+    ),
+    array(
+      'tid' => 'autocreate',
+      'vid' => 1,
+      'name' => 'yet another tag',
+      'vocabulary_machine_name' => 'tags',
+    ),
+  );
+
+  // @todo: File/Image.
+
+  node_save($node);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function spark_demo_uninstall() {
+  // Remove the sample content type and content.
+  // @todo: Figure out how to get this to work.
+  //drupal_uninstall_modules(array('every_field'));  
+}

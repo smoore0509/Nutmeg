@@ -1,0 +1,11 @@
+name = Spark Demo
+description = Demo content for the Spark distribution.
+core = 7.x
+dependencies[] = every_field
+
+; Information added by drupal.org packaging script on 2012-07-12
+version = "7.x-1.0-alpha2"
+core = "7.x"
+project = "spark"
+datestamp = "1342118841"
+

@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Handles installation for Commerce USPS module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_usps_uninstall() {
+  $fields = array(
+    'commerce_usps_postal_code',
+    'commerce_usps_services',
+    'commerce_usps_markup_type',
+    'commerce_usps_markup',
+    'commerce_usps_connection_address',
+    'commerce_usps_user',
+  );
+
+  foreach ($fields as $data) {
+    variable_del($data);
+  }
+}

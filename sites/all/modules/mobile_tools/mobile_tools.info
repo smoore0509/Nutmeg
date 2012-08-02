@@ -1,0 +1,17 @@
+name = Mobile Tools
+description = "This module gives a set of functionality to make your site mobile"
+core = 7.x
+package = Mobile
+files[] = mobile_tools.install
+files[] = mobile_tools.module
+files[] = mobile_tools_cache.inc
+files[] = mobile_tools_roles.inc
+files[] = mobile_tools.admin.inc
+files[] = plugin/access/is_mobile.inc
+configure = admin/config/system/mobile-tools
+; Information added by drupal.org packaging script on 2011-06-06
+version = "7.x-2.x-dev"
+core = "7.x"
+project = "mobile_tools"
+datestamp = "1307319866"
+

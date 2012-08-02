@@ -1,0 +1,11 @@
+# Ignore configuration files that may contain sensitive information.
+sites/*/settings*.php
+
+# Ignore paths that contain user-generated content.
+sites/*/files
+sites/*/private
+sites/commerce.resonetrics.com
+sites/drupal7tester.resonetrics.com
+sites/riverviewjazz.com
+sites/samandrobin.com
+sites/spark.resonetrics.com

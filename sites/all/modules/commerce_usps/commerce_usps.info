@@ -1,0 +1,14 @@
+name = USPS
+description = Integrates USPS with Commerce Shipping to rate selected USPS services during checkout.
+package = Commerce (shipping)
+dependencies[] = commerce
+dependencies[] = commerce_shipping
+dependencies[] = commerce_physical
+core = 7.x
+
+; Information added by drupal.org packaging script on 2012-05-05
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "commerce_usps"
+datestamp = "1336176473"
+

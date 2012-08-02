@@ -1,0 +1,312 @@
+<?php
+
+/**
+ * @file
+ * The edit module's beating heart: add classes and data- attributes to fields'
+ * and entities' HTML output so that we can make them in-place editable.
+ */
+
+// Always load the logic for altering the toolbar.
+module_load_include('inc', 'edit', 'includes/toolbar');
+
+/**
+ * Implements hook_menu()
+ */
+function edit_menu() {
+  $items = array();
+  $items['admin/edit/field/%/%/%'] = array(
+    // Access is controlled after we have inspected the entity which
+    // can't easily happen until the callback.
+    'access arguments' => array(TRUE),
+    'access callback'  => TRUE,
+    'page callback'    => 'edit_field_edit',
+    'page arguments'   => array(3, 4, 5),
+    'file'             => 'includes/pages.inc',
+    'delivery callback'=> 'ajax_deliver',
+    'theme callback'   => 'ajax_base_page_theme',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function edit_theme() {
+  return array(
+    'edit_spanned_field' => array(
+      'file'      => 'includes/theme.inc',
+      'variables' => array(
+        'value'   => NULL,
+        'edit_id' => NULL,
+        'label'   => NULL,
+        'classes' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_library().
+ */
+function edit_library() {
+  $path = drupal_get_path('module', 'edit');
+  $libraries['edit'] = array(
+    'title' => 'Edit',
+    'website' => 'http://drupal.org/project/edit',
+    'version' => NULL, // TODO: figure out what the correct way to do this is.
+    'js' => array(
+      $path . '/js/edit.js' => array(
+        'defer' => TRUE, // TODO: make sure that a subset of the JS is loaded ASAP, so that the view/edit mode toggle works immediately.
+      ),
+      $path . '/js/util.js' => array(
+        'defer' => TRUE,
+      ),
+      $path . '/js/ui.js' => array(
+        'defer' => TRUE,
+      ),
+      $path . '/js/ui-editables.js' => array(
+        'defer' => TRUE,
+      ),
+      $path . '/js/theme.js' => array(
+        'defer' => TRUE,
+      ),
+      $path . '/js/ajax.js' => array(
+        'defer' => TRUE,
+      ),
+      // Basic settings.
+      array(
+        'data' => array('edit' => array(
+          'fieldFormURL' => url('admin/edit/field/!entity_type/!id/!field_name'),
+          'context' => 'body',
+        )),
+        'type' => 'setting',
+      ),
+    ),
+    'css' => array(
+      $path . '/css/edit.css',
+    ),
+    'dependencies' => array(
+      array('system', 'jquery.form'),
+      array('system', 'drupal.ajax'),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function edit_form_fape_field_edit_form_alter(&$form, &$form_state) {
+  // Only alter this form when it's being built by the Edit module.
+  if (!array_key_exists('edit', $form_state)) {
+    return;
+  }
+
+  // Simplify simple field forms that contain only one form item.
+  // TODO: somehow make this less hacky.
+  $elements = element_children($form);
+  $defaults = array('actions', 'form_build_id', 'form_token', 'form_id');
+  $form_items = array_diff($elements, $defaults);
+  if (count($form_items) == 1) {
+    $k = $form_items[0];
+    if ($form[$k]['#type'] == 'container') {
+      $l = $form[$k]['#language'];
+      switch (count(element_children($form[$k][$l]))) {
+        case 0:
+          if ($form[$k][$l]['#type'] != 'checkbox') {
+            unset($form[$k][$l]['#title']);
+          }
+          break;
+        case 1:
+          unset($form[$k][$l][0]['value']['#title']);
+          break;
+        default:
+          // No changes.
+          break;
+      }
+    }
+    // Pseudofields that are language-independent, such as title, name and date.
+    else if (!array_key_exists('#language', $form[$k])) {
+      unset($form[$k]['#title']);
+    }
+  }
+
+  // Make it easy for the JS to identify the submit button.
+  $form['actions']['submit']['#attributes'] = array('class' => array('edit-form-submit'));
+}
+
+/**
+ * Implements hook_field_formatter_info_alter().
+ */
+function edit_field_formatter_info_alter(&$info) {
+  // TODO: create a UI that allows users to override these defaults.
+
+  // Add a new 'edit' key to each formatter, with either of these values:
+  //  - 'editable', i.e. these fields will be immediately editable;
+  //  - 'form', i.e. these fields will load the field's form through AJAX;
+  //  - 'disabled', i.e. these fields will not be editable inline.
+  $a = array(
+    // TODO: file/image
+    'file_default'   => 'disabled',
+    'file_table'     => 'disabled',
+    'file_url_plain' => 'disabled',
+    'image'          => 'disabled',
+    'list_default'   => 'form',
+    'list_key'       => 'form',
+    'number_integer'     => 'form',
+    'number_decimal'     => 'form',
+    'number_unformatted' => 'form',
+    'taxonomy_term_reference_link'         => 'form',
+    'taxonomy_term_reference_plain'        => 'form',
+    'taxonomy_term_reference_rss_category' => 'disabled',
+    'text_default'            => 'direct',
+    'text_plain'              => 'form',
+    'text_trimmed'            => 'disabled',
+    'text_summary_or_trimmed' => 'disabled',
+  );
+  foreach ($a as $k => $v) {
+    if (array_key_exists($k, $info)) {
+      $info[$k]['edit'] = $v;
+    }
+  }
+}
+
+/**
+ * Implements of hook_preprocess_HOOK().
+ */
+function edit_preprocess_page(&$var) {
+  // Special case: on node pages, the title of the node becomes the page title.
+  if (array_key_exists('node', $var) && entity_access('update', 'node', $var['node'])) {
+    // Pseudofield: title.
+    $node_type = node_type_get_type($var['node']->type);
+    if ($node_type->has_title) {
+      $id = $var['node']->nid;
+      $attributes = array(
+        'class' => 'edit-pseudofield edit-field edit-allowed edit-type-direct',
+        'data-edit-field-label' => $node_type->title_label,
+        'data-edit-id'          => "node:$id:title",
+      );
+      $var['title_prefix']['edit']['#markup'] = '<div ' . drupal_attributes($attributes) . '">';
+      $var['title_suffix']['edit']['#markup'] = '</div>';
+    }
+  }
+}
+
+/**
+ * Implements of hook_preprocess_HOOK().
+ */
+function edit_preprocess_node(&$var) {
+  $entity_type = $var['elements']['#entity_type'];
+  $entity      = $var['elements']['#node'];
+
+  if (entity_access('update', $entity_type, $entity)) {
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+    $i = entity_get_info($entity_type);
+
+    // Provide metadata through data- attributes.
+    $data_attributes = array(
+      'data-edit-id'              => "node:$id",
+      'data-edit-entity-label'    => $i['bundles'][$bundle]['label'],
+      'data-edit-entity-edit-url' => url("node/$id/edit"),
+    );
+    $var['attributes_array'] += $data_attributes;
+
+    // Mark this entity as editable.
+    $var['classes_array'][] = 'edit-entity edit-allowed';
+
+    // Pseudofield: title.
+    $node_type = node_type_get_type($bundle);
+    if ($node_type->has_title) {
+      $var['title_attributes_array']['class'] = 'edit-pseudofield edit-field edit-allowed edit-type-direct';
+      $var['title_attributes_array']['data-edit-field-label'] = $node_type->title_label;
+      $var['title_attributes_array']['data-edit-id'] = "node:$id:title";
+    }
+
+    // Pseudofields: author ("name") & created (authoring date, "date").
+    if ($var['display_submitted']) {
+      $var['name'] = edit_node_wrap_name($var['name'], $id);
+      $var['date'] = edit_node_wrap_date($var['date'], $id);
+      $var['submitted'] = edit_node_render_submitted($var['name'], $var['date']);
+    }
+  }
+}
+
+function edit_node_wrap_name($name, $node_id) {
+  $classes = 'edit-pseudofield edit-field edit-allowed edit-type-form';
+  return theme('edit_spanned_field', array(
+    'value' => $name,
+    'label' => t('Author'),
+    'edit_id' => "node:$node_id:author",
+    'classes' => $classes,
+  ));
+}
+
+function edit_node_wrap_date($date, $node_id) {
+  $classes = 'edit-pseudofield edit-field edit-allowed edit-type-form';
+  return theme('edit_spanned_field', array(
+    'value' => $date,
+    'label' => t('Authoring date'),
+    'edit_id' => "node:$node_id:created",
+    'classes' => $classes,
+  ));
+}
+
+/**
+ * Render pseudofields: author and created (authoring date).
+ */
+function edit_node_render_submitted($author, $created) {
+  // TODO: use template_preprocess_node(), or theme_preprocess_node().
+  return t(
+    'Submitted by !username on !datetime',
+    array('!username' => $author, '!datetime' => $created)
+  );
+}
+
+/**
+ * Implements of hook_preprocess_HOOK().
+ */
+function edit_preprocess_field(&$var) {
+  $entity_type = $var['element']['#entity_type'];
+  $entity      = $var['element']['#object'];
+  $field_name  = $var['element']['#field_name'];
+  $formatter   = $var['element']['#formatter'];
+
+  $formatter_info = field_info_formatter_types($formatter);
+  if (!array_key_exists('edit', $formatter_info)) {
+    watchdog('edit', '%formatter not yet compatible with Edit.', array('%formatter' => $formatter));
+    return;
+  }
+  $edit_ability = $formatter_info['edit'];
+  if ($edit_ability == 'disabled') {
+    return;
+  }
+
+  // If directly editable, check cardinality; if cardinality >1, then use a form
+  // anyway.
+  if ($edit_ability == 'direct') {
+    $field_info = field_info_field($field_name);
+    if ($field_info['cardinality'] != 1) {
+      $edit_ability = 'form';
+    }
+  }
+
+  if (entity_access('update', $entity_type, $entity) && field_access('edit', $field_name, $entity_type, $entity)) {
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+    $ei = entity_get_info($entity_type);
+    $fi = field_info_instance($entity_type, $field_name, $bundle);
+
+    // Provide metadata through data- attributes.
+    $data_attributes = array(
+      'data-edit-field-label'    => $fi['label'],
+      'data-edit-id'             => "$entity_type:$id:$field_name",
+    );
+    if (!array_key_exists('attributes_array', $var)) {
+      $var['attributes_array'] = array();
+    }
+    $var['attributes_array'] += $data_attributes;
+
+    // Mark this field as editable.
+    $var['classes_array'][] = "edit-field edit-allowed edit-type-$edit_ability";
+  }
+}

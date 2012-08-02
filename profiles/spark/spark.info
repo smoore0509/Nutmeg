@@ -1,0 +1,46 @@
+name = Spark
+description = Cutting-edge authoring experience improvements for Drupal.
+core = 7.x
+
+; Required modules (Core)
+; Copy/pasted from standard.info
+dependencies[] = block
+dependencies[] = color
+dependencies[] = comment
+dependencies[] = contextual
+dependencies[] = dashboard
+dependencies[] = help
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
+dependencies[] = taxonomy
+dependencies[] = dblog
+dependencies[] = search
+dependencies[] = shortcut
+dependencies[] = toolbar
+dependencies[] = overlay
+dependencies[] = field_ui
+dependencies[] = file
+dependencies[] = rdf
+
+; Required modules (Contrib)
+dependencies[] = fape
+dependencies[] = entity
+
+; Required modules (Sparkish)
+dependencies[] = edit
+dependencies[] = spark_demo
+
+; Required modules (UX++)
+dependencies[] = module_filter
+
+
+; Information added by drupal.org packaging script on 2012-07-12
+version = "7.x-1.0-alpha2"
+core = "7.x"
+project = "spark"
+datestamp = "1342118841"
+
