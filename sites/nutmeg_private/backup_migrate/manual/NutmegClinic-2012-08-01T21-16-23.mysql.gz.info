@@ -1,0 +1,8 @@
+filename = "NutmegClinic-2012-08-01T21-16-23"
+description = ""
+datestamp = "1343870188"
+generator = "Backup and Migrate (http://drupal.org/project/backup_migrate)"
+generatorversion = "7.x-2.x"
+sites[0][version] = "7.14"
+sites[0][name] = "Nutmeg Clinic"
+sites[0][url] = "http://nutmegclinic.resonetrics.com/"
